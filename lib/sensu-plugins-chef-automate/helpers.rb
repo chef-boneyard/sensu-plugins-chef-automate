@@ -31,7 +31,7 @@ class AutomateApi
   end
 
   def get_token
-    token_file = "#{ENV['HOME']}/.automate_sensu_token"
+    token_file = "/var/tmp/.automate_sensu_token"
     grace_period = 3600
     data = JSON.parse(File.read(token_file)) rescue Hash.new
     expiry = Time.iso8601(data['expiry']) rescue Time.now
