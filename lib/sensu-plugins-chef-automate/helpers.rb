@@ -12,7 +12,7 @@ class AutomateApi
     @creds = load_creds
     @verbose = verbose
     RestClient.log = 'stdout' if verbose
-    @token = get_token
+    @token = fetch_token
   end
 
   def load_creds
@@ -20,24 +20,32 @@ class AutomateApi
     JSON.parse(File.read(creds_file))
   end
 
-  def get_new_token
+  def fetch_new_token
     response = RestClient.post \
       "#{@base_url}/get-token", \
-      {username: @creds['username'], password: @creds['password']}.to_json,
-      {content_type: :json, accept: :json}
+      { username: @creds['username'], password: @creds['password'] }.to_json,
+      content_type: :json, accept: :json
     data = JSON.parse(response)
     data['expiry'] = (Time.now + data['ttl']).iso8601
     data
   end
 
-  def get_token
-    token_file = "/var/tmp/.automate_sensu_token"
+  def fetch_token
+    token_file = '/var/tmp/.automate_sensu_token'
     grace_period = 3600
-    data = JSON.parse(File.read(token_file)) rescue Hash.new
-    expiry = Time.iso8601(data['expiry']) rescue Time.now
+    data = begin
+             JSON.parse(File.read(token_file))
+           rescue
+             {}
+           end
+    expiry = begin
+               Time.iso8601(data['expiry'])
+             rescue
+               Time.now
+             end
     if expiry < Time.now + grace_period
-      puts "Token expired, getting a new one" if @verbose
-      data = get_new_token
+      puts 'Token expired, getting a new one' if @verbose
+      data = fetch_new_token
       File.write(token_file, data.to_json)
     end
     data['token']
@@ -45,16 +53,16 @@ class AutomateApi
 
   def request(method, endpoint, data)
     JSON.parse(RestClient::Request.execute(
-      method: method,
-      url: "#{@base_url}/#{endpoint}",
-      payload: data.to_json,
-      headers: {
-        content_type: :json,
-        accept: :json,
-        "chef-delivery-token": @token,
-        "chef-delivery-user": @creds['username'],
-        "chef-delivery-enterprise": @automate_enterprise
-      },
+                 method: method,
+                 url: "#{@base_url}/#{endpoint}",
+                 payload: data.to_json,
+                 headers: {
+                   content_type: :json,
+                   accept: :json,
+                   "chef-delivery-token": @token,
+                   "chef-delivery-user": @creds['username'],
+                   "chef-delivery-enterprise": @automate_enterprise
+                 }
     ))
   end
 end
