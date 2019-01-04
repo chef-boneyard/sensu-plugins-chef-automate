@@ -1,0 +1,23 @@
+sudo: true
+service: docker
+language: ruby
+cache:
+- bundler
+before_install:
+  - sudo iptables -L DOCKER || ( echo "DOCKER iptables chain missing" ; sudo iptables -N DOCKER )
+  - gem install bundler -v 1.15
+install:
+- bundle install
+rvm:
+- 2.3.0
+- 2.4.1
+notifications:
+  email:
+    recipients:
+    - sensu-plugin@sensu-plugins.io
+    on_success: change
+    on_failure: always
+script:
+  - gem build sensu-plugins-chef-automate.gemspec
+  - gem install sensu-plugins-chef-automate-*.gem
+  - bundle exec rake quick
