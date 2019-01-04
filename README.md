@@ -1,1 +1,1 @@
-Development repo for various sensu checks for chef automate
+Development repo for various sensu checks for Chef Automate 1.0
